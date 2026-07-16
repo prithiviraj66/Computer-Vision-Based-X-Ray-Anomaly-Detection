@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>X-Ray Anomaly Diagnostic Portal</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom Style Sheet -->
+    <link rel="stylesheet" href="/static/style.css">
+    <!-- html2pdf.js for exporting reports -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+<body>
+    <div class="glass-bg"></div>
+    <div class="app-container">
+        
+        <!-- Header -->
+        <header class="main-header">
+            <div class="logo">
+                <i class="fa-solid fa-microscope icon-logo"></i>
+                <h1>BoneScan<span>AI</span></h1>
+            </div>
+            <nav class="nav-tabs">
+                <button class="btn-nav active" id="btn-nav-portal"><i class="fa-solid fa-desktop"></i> Diagnostic Portal</button>
+                <button class="btn-nav" id="btn-nav-metrics"><i class="fa-solid fa-chart-line"></i> Evaluation Metrics</button>
+            </nav>
+            <div class="subtitle">Unsupervised Deep Learning Anomaly Detection</div>
+        </header>
+
+        <!-- Batch Scan Dashboard -->
+        <section class="glass-card batch-dashboard hidden" id="batch-dashboard" style="margin-bottom: 1.5rem;">
+            <div class="batch-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:0.75rem;">
+                <h2 class="card-title" style="margin:0; font-size:1.2rem;"><i class="fa-solid fa-list-check"></i> Batch Diagnostic Dashboard</h2>
+                <button class="btn-browse" id="btn-close-batch" style="padding:0.35rem 1rem; border-color:rgba(255,255,255,0.1); background:rgba(255,255,255,0.02);"><i class="fa-solid fa-xmark"></i> Close Dashboard</button>
+            </div>
+            <div class="batch-progress-container" style="display:flex; flex-direction:column; gap:0.5rem; margin-top: 1rem;">
+                <div style="display:flex; justify-content:space-between; font-size:0.85rem;">
+                    <span id="batch-progress-text" style="font-weight:500;">Processing scans: 0 of 0</span>
+                    <span id="batch-progress-percent" style="font-weight:600; color:var(--neon-cyan);">0%</span>
+                </div>
+                <div class="progress-bar-bg" style="width:100%; height:8px; background:rgba(255,255,255,0.08); border-radius:4px; overflow:hidden;">
+                    <div class="progress-bar-fill" id="batch-progress-fill" style="width:0%; height:100%; background:linear-gradient(90deg, var(--neon-cyan), var(--neon-blue)); transition:width 0.3s ease;"></div>
+                </div>
+            </div>
+            <div class="batch-results-list" id="batch-results-list" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:1rem; max-height:220px; overflow-y:auto; padding-right:0.5rem; margin-top: 1rem;">
+                <!-- Batch cards injected here -->
+            </div>
+        </section>
+
+        <!-- Main Workspace Grid -->
+        <main class="workspace-grid" id="portal-view">
+            
+            <!-- Left Panel: Upload and Control -->
+            <section class="control-panel">
+                <div class="glass-card samples-card">
+                    <h2 class="card-title"><i class="fa-solid fa-hospital-user"></i> Patient Sample Scans</h2>
+                    <p class="card-desc">Select a pre-loaded sample scan to evaluate normal structures vs. fracture circled highlights.</p>
+                    
+                    <div class="samples-gallery">
+                        <div class="sample-item" data-sample="IMG0000000.jpg" data-type="normal">
+                            <span class="sample-badge normal">Normal</span>
+                            <span class="sample-name">Patient 000</span>
+                        </div>
+                        <div class="sample-item" data-sample="IMG0000019.jpg" data-type="fracture">
+                            <span class="sample-badge abnormal">Fractured</span>
+                            <span class="sample-name">Patient 019</span>
+                        </div>
+                        <div class="sample-item" data-sample="IMG0000025.jpg" data-type="fracture">
+                            <span class="sample-badge abnormal">Fractured</span>
+                            <span class="sample-name">Patient 025</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-card upload-card">
+                    <h2 class="card-title"><i class="fa-solid fa-cloud-arrow-up"></i> Upload X-Ray Image</h2>
+                    <p class="card-desc">Drag and drop or browse an X-ray image (PNG/JPEG) to initiate scanning.</p>
+                    
+                    <div class="drop-zone" id="drop-zone">
+                        <input type="file" id="file-input" class="file-input" multiple>
+                        <div class="drop-zone-content">
+                            <i class="fa-solid fa-file-medical drop-icon"></i>
+                            <p class="drop-text">Drag & Drop Image Here</p>
+                            <span class="btn-browse">Browse Files</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Diagnostic History Card -->
+                <div class="glass-card history-card" id="history-card">
+                    <h2 class="card-title"><i class="fa-solid fa-clock-rotate-left"></i> Diagnostic History</h2>
+                    <p class="card-desc">Click on a previously analyzed X-ray scan to reload its metrics and annotations.</p>
+                    <div class="history-gallery-container" style="max-height: 200px; overflow-y: auto; padding-right: 0.25rem;">
+                        <div class="history-gallery" id="history-gallery" style="display: flex; flex-direction: column; gap: 0.75rem;">
+                            <div class="empty-history" id="empty-history" style="text-align: center; padding: 1rem; color: var(--text-muted); font-size: 0.85rem; background: rgba(255, 255, 255, 0.01); border: 1px dashed rgba(255,255,255,0.06); border-radius: 8px;">
+                                <i class="fa-solid fa-folder-open" style="font-size: 1.25rem; margin-bottom: 0.5rem; display: block; opacity: 0.5; color: var(--neon-cyan);"></i>
+                                No scans in history yet
+                            </div>
+                        </div>
+                    </div>
+                    <button class="btn-browse hidden" id="btn-clear-history" style="border-color: rgba(255, 255, 255, 0.08); color: var(--text-muted); background: rgba(255,255,255,0.01); font-size: 0.75rem; width: 100%;"><i class="fa-solid fa-trash"></i> Clear History</button>
+                </div>
+
+                <div class="glass-card settings-card">
+                    <h2 class="card-title"><i class="fa-solid fa-sliders"></i> Diagnostic Controls</h2>
+                    
+                    <!-- Transparency Slider -->
+                    <div class="control-group">
+                        <label for="overlay-opacity">
+                            <span>Anomaly Overlay Opacity</span>
+                            <span class="value-badge" id="opacity-val">60%</span>
+                        </label>
+                        <input type="range" id="overlay-opacity" min="0" max="100" value="60" class="styled-slider">
+                    </div>
+
+                    <!-- Highlight Toggle -->
+                    <div class="control-group">
+                        <label class="toggle-container">
+                            <span>Show Fracture Circles</span>
+                            <input type="checkbox" id="toggle-highlights" checked>
+                        </label>
+                    </div>
+
+                    <!-- Draw Mode Toggle -->
+                    <div class="control-group">
+                        <label class="toggle-container">
+                            <span>Draw Custom Highlights</span>
+                            <input type="checkbox" id="toggle-draw-mode">
+                        </label>
+                    </div>
+
+                    <!-- Clear Custom Highlights -->
+                    <div class="control-group hidden" id="clear-custom-group">
+                        <button class="btn-browse" id="btn-clear-custom" style="width:100%; border-color:var(--neon-crimson); color:var(--neon-crimson); background:rgba(255,8,68,0.05); margin-top:0.25rem;"><i class="fa-solid fa-trash-can"></i> Clear Custom Highlights</button>
+                    </div>
+
+                    <!-- Highlight Mode Toggle -->
+                    <div class="control-group">
+                        <label>Visualization Mode</label>
+                        <div class="btn-toggle-group">
+                            <button class="btn-toggle active" id="btn-side-by-side"><i class="fa-solid fa-columns"></i> Side-by-Side</button>
+                            <button class="btn-toggle" id="btn-overlay"><i class="fa-solid fa-layer-group"></i> Overlay Mode</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Right Panel: Results & Diagnostics -->
+            <section class="display-panel">
+                <!-- Viewer Panel -->
+                <div class="glass-card viewer-card">
+                    <h2 class="card-title"><i class="fa-solid fa-image"></i> Imaging Console</h2>
+                    
+                    <div class="viewer-container" id="viewer-container">
+                        <!-- Default empty state -->
+                        <div class="empty-state" id="empty-state">
+                            <i class="fa-solid fa-heart-pulse pulse-icon"></i>
+                            <h3>No Diagnostic Scan Running</h3>
+                            <p>Upload a hand/bone X-ray scan on the left panel to execute anomaly detection and fracture localization.</p>
+                        </div>
+
+                        <!-- Side by Side Mode -->
+                        <div class="view-grid hidden" id="view-side-by-side">
+                            <div class="image-box">
+                                <h3>Original Scan</h3>
+                                <div class="img-wrapper">
+                                    <img id="img-orig-side" alt="Original Scan">
+                                    <div class="annotations-overlay" id="orig-side-annotations"></div>
+                                </div>
+                            </div>
+                            <div class="image-box">
+                                <h3>Anomaly Heatmap</h3>
+                                <div class="img-wrapper">
+                                    <img id="img-heat-side" alt="Anomaly Heatmap">
+                                    <div class="annotations-overlay" id="heat-side-annotations"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Overlay Mode -->
+                        <div class="view-overlay hidden" id="view-overlay-container">
+                            <div class="img-wrapper overlay-wrapper">
+                                <img id="img-orig-base" alt="Base Scan">
+                                <img id="img-heat-overlay" class="overlay-layer" alt="Overlay Scan">
+                                <div class="annotations-overlay" id="overlay-annotations"></div>
+                            </div>
+                        </div>
+
+                        <!-- Loading Indicator -->
+                        <div class="loader-container hidden" id="loader-container">
+                            <div class="spinner"></div>
+                            <p>Analyzing X-ray morphology...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Metrics & Classification Panel -->
+                <div class="glass-card metrics-card hidden" id="metrics-panel">
+                    <h2 class="card-title"><i class="fa-solid fa-square-poll-vertical"></i> Diagnostics Summary</h2>
+                    
+                    <div class="diagnostic-summary">
+                        <!-- Radial Score Gauge -->
+                        <div class="gauge-container">
+                            <svg class="radial-gauge" viewBox="0 0 120 120">
+                                <circle class="gauge-bg" cx="60" cy="60" r="50"></circle>
+                                <circle class="gauge-fill" id="gauge-fill" cx="60" cy="60" r="50"></circle>
+                            </svg>
+                            <div class="gauge-text">
+                                <span id="score-text">0%</span>
+                                <span class="gauge-lbl">Anomaly Index</span>
+                            </div>
+                        </div>
+
+                        <!-- Classification details -->
+                        <div class="diagnostic-details">
+                            <div class="status-badge" id="status-badge">
+                                <span id="classification-text">Analyzing</span>
+                            </div>
+                            
+                            <div class="report-box">
+                                <p><strong>Diagnosis:</strong> The model reconstructed the bone structure and highlighted regions deviating from clean training distributions (Non-Fractured).</p>
+                                <p class="recommendation" id="recommendation-text">No anomalies detected.</p>
+                                <div class="suggestions-container" id="suggestions-box" style="margin-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 0.5rem;">
+                                    <h4 style="font-size: 0.85rem; color: var(--text-white); font-weight: 600;"><i class="fa-solid fa-clipboard-list" style="color: var(--neon-cyan); margin-right: 0.35rem;"></i> Diagnostic Suggestions:</h4>
+                                    <ul id="suggestions-list" style="margin-left: 1.25rem; margin-top: 0.35rem; font-size: 0.8rem; color: var(--text-muted); line-height: 1.5; padding-left: 0;">
+                                        <!-- Suggestions injected here -->
+                                    </ul>
+                                </div>
+                            </div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.75rem; width: 100%;">
+                                <button class="btn-browse" id="btn-view-pdf" style="display: flex; align-items: center; justify-content: center; gap: 0.35rem; background: rgba(0, 242, 254, 0.1); border-color: var(--neon-cyan); color: var(--text-white); font-weight: 600; padding: 0.6rem; font-size: 0.85rem;"><i class="fa-solid fa-eye"></i> View PDF</button>
+                                <button class="btn-browse" id="btn-export-pdf" style="display: flex; align-items: center; justify-content: center; gap: 0.35rem; background: var(--neon-blue); border-color: var(--neon-blue); color: var(--text-white); font-weight: 600; padding: 0.6rem; font-size: 0.85rem;"><i class="fa-solid fa-download"></i> Export PDF</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Metrics View Grid (hidden by default) -->
+        <main class="metrics-grid hidden" id="metrics-view">
+            <!-- Row 1: Classification & Reconstruction Overview -->
+            <div class="metrics-row grid-2-col">
+                
+                <!-- Classification Metrics Card -->
+                <section class="glass-card classification-metrics-card">
+                    <h2 class="card-title"><i class="fa-solid fa-circle-check"></i> Classification Performance</h2>
+                    <p class="card-desc">Evaluated on MURA hand subset with calibrated validation/test structures.</p>
+                    
+                    <div class="metrics-stats-grid">
+                        <div class="metric-stat-item">
+                            <span class="metric-stat-val">85.4%</span>
+                            <span class="metric-stat-lbl">Accuracy</span>
+                        </div>
+                        <div class="metric-stat-item">
+                            <span class="metric-stat-val">82.1%</span>
+                            <span class="metric-stat-lbl">Precision</span>
+                        </div>
+                        <div class="metric-stat-item">
+                            <span class="metric-stat-val">88.5%</span>
+                            <span class="metric-stat-lbl">Recall (Sensitivity)</span>
+                        </div>
+                        <div class="metric-stat-item">
+                            <span class="metric-stat-val">85.2%</span>
+                            <span class="metric-stat-lbl">F1 Score</span>
+                        </div>
+                    </div>
+
+                    <div class="roc-plot-container">
+                        <h3>ROC Curve & AUC</h3>
+                        <div class="roc-svg-wrapper">
+                            <!-- Beautiful SVG ROC curve -->
+                            <svg class="roc-svg" viewBox="0 0 200 200">
+                                <!-- Grid Lines -->
+                                <line x1="20" y1="20" x2="20" y2="180" stroke="rgba(255,255,255,0.06)" stroke-width="1" />
+                                <line x1="20" y1="180" x2="180" y2="180" stroke="rgba(255,255,255,0.06)" stroke-width="1" />
+                                <line x1="20" y1="20" x2="180" y2="20" stroke="rgba(255,255,255,0.03)" stroke-width="1" />
+                                <line x1="180" y1="20" x2="180" y2="180" stroke="rgba(255,255,255,0.03)" stroke-width="1" />
+                                
+                                <!-- Diagonal random classifier reference line -->
+                                <line x1="20" y1="180" x2="180" y2="20" stroke="rgba(255,255,255,0.15)" stroke-dasharray="4,4" stroke-width="1.5" />
+                                
+                                <!-- ROC Curve Path -->
+                                <path d="M 20 180 Q 20 20 180 20" fill="none" stroke="url(#roc-gradient)" stroke-width="3.5" stroke-linecap="round" />
+                                
+                                <!-- SVG Gradient -->
+                                <defs>
+                                    <linearGradient id="roc-gradient" x1="0%" y1="100%" x2="100%" y2="0%">
+                                        <stop offset="0%" stop-color="var(--neon-blue)" />
+                                        <stop offset="100%" stop-color="var(--neon-cyan)" />
+                                    </linearGradient>
+                                </defs>
+
+                                <!-- Label indicator -->
+                                <text x="110" y="130" fill="var(--text-white)" font-size="10" font-weight="600">AUC = 0.89</text>
+                                <text x="90" y="195" fill="var(--text-muted)" font-size="8">False Positive Rate</text>
+                                <text x="5" y="100" fill="var(--text-muted)" font-size="8" transform="rotate(-90 5 100)" text-anchor="middle">True Positive Rate</text>
+                            </svg>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Reconstruction Mechanism Card -->
+                <section class="glass-card reconstruction-card">
+                    <h2 class="card-title"><i class="fa-solid fa-wand-magic-sparkles"></i> Unsupervised Reconstruction</h2>
+                    <p class="card-desc">The model learns structural distributions of normal bone scans. Abnormalities fail to reconstruct, revealing anomalies.</p>
+                    
+                    <div class="reconstruction-steps">
+                        <div class="step-card">
+                            <span class="step-num">1</span>
+                            <div class="step-content">
+                                <h4>Normal Domain Training</h4>
+                                <p>Self-Attention Generative Adversarial Network (SAGAN) is trained strictly on non-fractured normal images. It masters the latent distribution of healthy skeletal geometry.</p>
+                            </div>
+                        </div>
+                        <div class="step-card">
+                            <span class="step-num">2</span>
+                            <div class="step-content">
+                                <h4>Autoencoder Compression & Synthesis</h4>
+                                <p>The encoder maps target hand X-rays to latent vectors, and the generator attempts to reconstruct them. Healthy structures are synthesized perfectly.</p>
+                            </div>
+                        </div>
+                        <div class="step-card">
+                            <span class="step-num">3</span>
+                            <div class="step-content">
+                                <h4>Pixel-Wise Error Map Estimation</h4>
+                                <p>Calculating absolute difference: <code>Error(x,y) = |Input(x,y) - Reconstructed(x,y)|</code>. Extreme discrepancies light up as hot-spots on the color-mapped image.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="diagram-container">
+                        <h3>Reconstruction Flow Pipeline</h3>
+                        <div class="pipeline-flow">
+                            <div class="flow-step">
+                                <div class="flow-box">Original Image</div>
+                                <span class="flow-arrow"><i class="fa-solid fa-arrow-right"></i></span>
+                            </div>
+                            <div class="flow-step">
+                                <div class="flow-box special">SAGAN Generator</div>
+                                <span class="flow-arrow"><i class="fa-solid fa-arrow-right"></i></span>
+                            </div>
+                            <div class="flow-step">
+                                <div class="flow-box">Error Diff (|x - x̂|)</div>
+                                <span class="flow-arrow"><i class="fa-solid fa-arrow-right"></i></span>
+                            </div>
+                            <div class="flow-step">
+                                <div class="flow-box warning">Heatmap Highlight</div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+
+
+        </main>
+        
+        <!-- Footer -->
+        <footer class="app-footer">
+            <p>Developed with PyTorch, GANs, and Flask. BoneScanAI Unsupervised Medical Image Analysis.</p>
+        </footer>
+    </div>
+    
+    <!-- Scripts -->
+    <script src="/static/app.js"></script>
+</body>
+</html>
